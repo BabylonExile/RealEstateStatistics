@@ -1,48 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+from tabulate import tabulate
 
-# Открываем файл с данными и создаем двумерный список с целочисленными элементами на его основе
+##################################################################
+# Чтение данных из файла
+##################################################################
 with open('flat_price.csv', 'r') as csvFile:
-    reader = csv.reader(csvFile, delimiter=';', quoting=csv.QUOTE_NONNUMERIC)
-    data = [list(map(int, i)) for i in reader]
+    reader = csv.reader(csvFile, delimiter=';')
+    # Создаем двумерный список на основе полученных данных
+    # и приводим элементы к целочисленному виду, там где это возможно
+    data = [list(map(lambda i: int(i) if i.isdecimal() else i, i)) for i in reader]
 
 ##################################################################
 #  Вывод информации на экран в удобном формате
 ##################################################################
+print("\n\x1b[93m\033[1mЦены в рублях на рынке первичного жилья в России за последние 15 лет\033[0;0m")
+table = tabulate(data[1:], data[0], tablefmt="fancy_grid", floatfmt=".6f")
+print(table)
 
 ##################################################################
 #  Определение какие квартиры подорожали сильнее всего
 ##################################################################
-
+differences = {}  # словарь, содержащий величину удорожания квартир
+for line in data[1:]:
+    differences[line[0]] = (line[-1] / line[1] - 1) * 100
+max_rising_cost = max(differences.values())
+max_rising_cost_type = max(differences, key=differences.get)
+print("\n\x1b[31mБольше всего подорожали {0}-комнатные квартиры. "
+      "Рост составил {1:.2f}%\033[0;0m".format(max_rising_cost_type, max_rising_cost))
 
 ##################################################################
 #  Построение графиков
 ##################################################################
-
-# Выделяем срез данных для годов (ось X)
-years = data[0][1:]
-# Вырезаем цены
-prices = [line[:0] + line[1:] for line in data[1:]]
-# Берем данные для легенды из первого столбца
+# Составляем список с типами квартир
 flat_types = [line[0] for line in data[1:]]
-flat_types = [str(f) + "-к кв." for f in flat_types]
+# Составляем таблицу цен
+prices = [line[:0] + line[1:] for line in data[1:]]
+# Выделяем срез данных для годов (заголовок таблицы, ось X)
+years = data[0][1:]
+# Формируем текст легенды
+legend = [str(f) + "-к кв." for f in flat_types]
 # Конвертируем формат данных для построения графиков
 y = np.asarray(prices)
 # Устанавливаем размер окна по умолчанию
 plt.rcParams["figure.figsize"] = (10, 6)
 # Устанавливаем текст заголовка окна
-plt.figure('Цены на рынке первичного жилья в России')
+plt.figure('Динамика цен на рынке первичного жилья в России')
 # Передаем данные для построения графиков
 plt.plot(years, y.T, linewidth=3)
 # Отменяем экспоненциальный вывод больших чисел для осей
 plt.ticklabel_format(style='plain')
 # Добавляем подпись оси Y
 plt.ylabel('Цена в руб.')
-# Принудительно устанавливаем засечки
+# Принудительно устанавливаем засечки по всем годам
 plt.xticks(years)
 # Уменьшаем размер блока графиков, чтобы вместилась легенда
-plt.tight_layout(rect=[0, 0.1, 1, 1])
+plt.tight_layout(rect=(0, 0.1, 1, 1))
 # Настройка вывода легенды под графиками
-plt.legend(flat_types, fancybox=True, shadow=True, ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.17))
+plt.legend(legend, fancybox=True, shadow=True, ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.17))
 plt.show()
